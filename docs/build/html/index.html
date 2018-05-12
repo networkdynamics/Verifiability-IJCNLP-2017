@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Quote verifiability, part of the Validators Project &#8212; verifiability 0.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="verifiability 0.0.0 documentation" href="#" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="#">verifiability 0.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="quote-verifiability-part-of-the-validators-project">
+<h1>Quote verifiability, part of the Validators Project<a class="headerlink" href="#quote-verifiability-part-of-the-validators-project" title="Permalink to this headline">¶</a></h1>
+<p>This documentation isn&#8217;t displaying correctly on Gitlab.  Read it
+<a class="reference external" href="http://cgi.cs.mcgill.ca/~enewel3/temp/verifiability/docs/html/">here</a>
+instead.</p>
+<div class="section" id="the-harmoniclogistic-model">
+<h2>The <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model<a class="headerlink" href="#the-harmoniclogistic-model" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> class is a machine-learning model that produces a
+regression in the range [0,1].  It is structured as a harmonic mean of logistic
+regressions.  The model can have any number of logistic regression units, each
+being a full standard logistic regression model.</p>
+<p>The generative story of the model is that some phenomenon, like quote
+verifiability, results from multiple <em>factors</em> simultaneously holding&#8212;in the
+case of verifiability, these are the component verifiability of the source,
+cue, and content spans.  The overall verifiability score is a result of
+combining the factors with the idea that the <em>weakest link</em> is the main
+determinant of the overall verifiability.  Conceptually, this could be achieved
+by taking the <code class="docutils literal"><span class="pre">min</span></code> of the <em>factor</em>’s verifiabilities, but this creates
+discontinuities in the derivative of the model&#8217;s output.  Instead, the harmonic
+mean is used as a kind of <em>soft</em> <code class="docutils literal"><span class="pre">min</span></code>, which is differentiable.</p>
+<div class="section" id="using-the-harmoniclogistic-model">
+<h3>Using the <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model<a class="headerlink" href="#using-the-harmoniclogistic-model" title="Permalink to this headline">¶</a></h3>
+<p>Like many machine learning models, the <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model expects
+each example to be encoded as a numeric feature vector.  One crucial detail is
+that you need to tell the <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model which features belong to
+which <em>factor</em>.  So, for example, let us suppose that we have a 10-component
+feature vector, where features 0 through 2 describe the source, features 3
+through 6 describe the cue, and features 7 through 9 describe the
+content.  The source, cue, and content represent the three <em>factors</em> that we
+would like to model using individual logistic regressions, and we need to tell
+<code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> which features belong to which factors.</p>
+<p>We do this using the <code class="docutils literal"><span class="pre">lengths</span></code> parameter when creating an instance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">harmonic_logistic</span> <span class="kn">import</span> <span class="n">HarmonicLogistic</span>
+
+<span class="n">regressor</span> <span class="o">=</span> <span class="n">HarmonicLogistic</span><span class="p">(</span><span class="n">lengths</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="section" id="training">
+<h4>Training<a class="headerlink" href="#training" title="Permalink to this headline">¶</a></h4>
+<p>To train a <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model, you need to encode the training data
+into two numpy arrays: one for the feature vectors, and one for the true output
+scores (the value we&#8217;re trying to regress, i.e. the verifiability score).</p>
+<p>The feature vectors should be stored in a 2-dimensional numpy array, such that
+each row of the array is one feature vector, that is, the shape of the array
+should be <code class="docutils literal"><span class="pre">(num_training_examples,</span> <span class="pre">feature_vector_length)</span></code>.  The target
+scores (verifiability scores to be regressed) should be in a 1-dimensional
+array, with length equal to the number of training examples.  Both arrays
+should have <code class="docutils literal"><span class="pre">dtype='float64'</span></code>.</p>
+<p>Training the model might look something like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c1"># Get the training data</span>
+<span class="n">feature_vectors</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.54</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">],</span>
+<span class="p">]</span>
+<span class="n">target_vector</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">]</span>
+
+<span class="c1"># Cast it into numpy float64 arrays</span>
+<span class="n">feature_vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+<span class="n">target_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">target_vector</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+
+<span class="c1"># Train the model</span>
+<span class="n">regressor</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">,</span> <span class="n">target_vector</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default, the model will train until it&#8217;s loss function changes by less than
+<code class="docutils literal"><span class="pre">1e-8</span></code> from one stochastic-gradient-descent step to the next, and will use a
+learning rate of <code class="docutils literal"><span class="pre">1.0</span></code>.  The loss and the change in loss are printed after
+each training epoch.  You can control all of these behaviors, e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Specify the learning rate when constructing the model</span>
+<span class="n">regressor</span> <span class="o">=</span> <span class="n">HarmonicLogistic</span><span class="p">(</span><span class="n">lengths</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="c1"># Train the model</span>
+<span class="n">regressor</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">feature_vectors</span><span class="p">,</span> <span class="n">target_vector</span><span class="p">,</span>
+    <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>How do you know when to modify the learning rate?  Setting the learning rate
+involves weighing the speed of training against the stability of the stochastic
+gradient descent and the precision of the fit it is capable of generating.  The
+default learning rate of 1.0 worked well in the test suite, and if it works and
+the model doesn&#8217;t take too long to train, then it&#8217;s fine.</p>
+<p>A larger step size means that the model will approach convergence more quickly,
+at least at first.  But if the step size is too large, then the model may never
+converge, because it actually steps over the basin of the loss-function.  A
+smaller step size will take longer to converge, but because of the smaller step
+size, the algorithm can home in on a minimum of the loss function more
+precisely.</p>
+<p>What should the tolerance be?  The tolerance is involves a similar time vs
+accuracy tradeoff.  It represents an amount of change in the model&#8217;s loss
+function that we consider to be negligible.  Once the loss function changes by
+less than the tolerance from one sgd-step to the next, optimization will stop.
+A very small (i.e. very precise) tolerance might require a smaller learning
+rate to converge.</p>
+</div>
+<div class="section" id="predicting">
+<h4>Predicting<a class="headerlink" href="#predicting" title="Permalink to this headline">¶</a></h4>
+<p>A model can be used to predict the output score (verifiability) from supplied
+feature vectors.  Supply the feature vectors to the <code class="docutils literal"><span class="pre">predict</span></code> method in the
+same format as for the <cite>train</cite> method, but don&#8217;t provide a target vector:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">regressor</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">)</span>
+<span class="go">array([0.349945699, 0.70010234, 0.77732115])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-and-loading">
+<h4>Saving and loading<a class="headerlink" href="#saving-and-loading" title="Permalink to this headline">¶</a></h4>
+<p>Once trained, save a model to disk using the <code class="docutils literal"><span class="pre">save()</span></code> method, passing it a path at
+which to write the model.  The internal parameters that define the model will
+be written to file using <code class="docutils literal"><span class="pre">numpy</span></code>’s <code class="docutils literal"><span class="pre">.npz</span></code> format.  To load a model,
+supply a model file&#8217;s path to the <code class="docutils literal"><span class="pre">load</span></code> keyword in the constructor, or
+call the <code class="docutils literal"><span class="pre">load()</span></code> method on an existing model instance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Save a model</span>
+<span class="n">regressor</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;my-model.npz&#39;</span><span class="p">)</span>
+
+<span class="c1"># Load a model using the load keyword in the constructor</span>
+<span class="n">new_regressor</span> <span class="o">=</span> <span class="n">HarmonicLogistic</span><span class="p">(</span><span class="n">load</span><span class="o">=</span><span class="s1">&#39;my-model.npz&#39;</span><span class="p">)</span>
+
+<span class="c1"># Or load a model onto an existing HarmonicLogistic instance</span>
+<span class="n">new_regressor</span> <span class="o">=</span> <span class="n">HarmonicLogistic</span><span class="p">(</span><span class="n">lengths</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>   <span class="c1"># Note: lengths overwritten by those in the stored model</span>
+<span class="n">new_regressor</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;my-model.npz&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Quote verifiability, part of the Validators Project</a><ul>
+<li><a class="reference internal" href="#the-harmoniclogistic-model">The <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model</a><ul>
+<li><a class="reference internal" href="#using-the-harmoniclogistic-model">Using the <code class="docutils literal"><span class="pre">HarmonicLogistic</span></code> model</a><ul>
+<li><a class="reference internal" href="#training">Training</a></li>
+<li><a class="reference internal" href="#predicting">Predicting</a></li>
+<li><a class="reference internal" href="#saving-and-loading">Saving and loading</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="#">verifiability 0.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Edward Newell, Ariane Schang.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.6.
+    </div>
+  </body>
+</html>
